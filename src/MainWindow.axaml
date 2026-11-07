@@ -1,0 +1,170 @@
+<!--
+  The main window. Layout only: what each button does is in MainWindow.axaml.cs.
+  Each setting is one "SettingsExpander" card (Windows 11 Settings style):
+    Header = title, Description = small grey text, Footer = the control on the right.
+-->
+<wnd:AppWindow xmlns="https://github.com/avaloniaui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:ui="using:FluentAvalonia.UI.Controls"
+               xmlns:wnd="using:FluentAvalonia.UI.Windowing"
+               x:Class="VokoAvalonia.MainWindow"
+               Title="VokoAvalonia"
+               Width="860" Height="780" MinWidth="560" MinHeight="480">
+
+  <DockPanel>
+
+    <!-- ===== Bottom bar: record controls ===== -->
+    <Border DockPanel.Dock="Bottom" Padding="24,12" BorderThickness="0,1,0,0"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+          <Button x:Name="StartButton" Classes="accent" Click="OnStartClick" Padding="16,8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon Data="{StaticResource IconRecord}" Width="16" Height="16" />
+              <TextBlock Text="Start" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="PauseButton" Click="OnPauseClick" Padding="16,8" IsEnabled="False">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon x:Name="PauseIcon" Data="{StaticResource IconPause}" Width="16" Height="16" />
+              <TextBlock x:Name="PauseText" Text="Pause" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="StopButton" Click="OnStopClick" Padding="16,8" IsEnabled="False">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon Data="{StaticResource IconStop}" Width="16" Height="16" />
+              <TextBlock Text="Stop" />
+            </StackPanel>
+          </Button>
+          <Button Click="OnSnapshotClick" Padding="16,8" ToolTip.Tip="Take a screenshot">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon Data="{StaticResource IconScreenshot}" Width="16" Height="16" />
+              <TextBlock Text="Snapshot" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+
+        <TextBlock x:Name="StatusText" Grid.Column="1" Margin="16,0" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+        <TextBlock x:Name="TimeText" Grid.Column="2" Text="00:00:00" VerticalAlignment="Center"
+                   FontSize="20" FontWeight="SemiBold" />
+      </Grid>
+    </Border>
+
+    <!-- ===== Settings ===== -->
+    <ScrollViewer>
+      <StackPanel Margin="32,24,32,32" MaxWidth="1000" Spacing="4">
+
+        <TextBlock Text="Screencast" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+        <!-- Errors and tips appear here. -->
+        <ui:InfoBar x:Name="MessageBar" IsOpen="False" IsClosable="True" Margin="0,0,0,8" />
+
+        <!-- Screen -->
+        <TextBlock Text="Screen" FontWeight="SemiBold" Margin="0,12,0,4" />
+
+        <ui:SettingsExpander Header="Display" Description="Which screen to record">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconDesktop}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer><ComboBox x:Name="ScreenBox" MinWidth="260" /></ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <ui:SettingsExpander Header="Record mouse cursor" Description="Show the pointer in the video">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconCursor}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer><ToggleSwitch x:Name="CursorSwitch" /></ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <ui:SettingsExpander Header="Minimize when recording starts" Description="Keeps this window out of the video">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconWindow}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer><ToggleSwitch x:Name="MinimizeSwitch" /></ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <!-- Audio -->
+        <TextBlock Text="Audio" FontWeight="SemiBold" Margin="0,20,0,4" />
+
+        <ui:SettingsExpander Header="Record microphone" Description="Pick the microphone to record from">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconMic}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <ComboBox x:Name="MicBox" MinWidth="220" PlaceholderText="Looking for microphones…" />
+              <ToggleSwitch x:Name="MicSwitch" />
+            </StackPanel>
+          </ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <!-- Video -->
+        <TextBlock Text="Video" FontWeight="SemiBold" Margin="0,20,0,4" />
+
+        <ui:SettingsExpander Header="Format" Description="MKV is safest; MP4 plays everywhere">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconVideo}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer><ComboBox x:Name="FormatBox" MinWidth="160" /></ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <ui:SettingsExpander Header="Frames per second" Description="Higher is smoother and makes bigger files">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconFps}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer><ComboBox x:Name="FpsBox" MinWidth="160" /></ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <ui:SettingsExpander Header="Quality" Description="Better quality makes bigger files">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconQuality}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer><ComboBox x:Name="QualityBox" MinWidth="160" /></ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <ui:SettingsExpander Header="Save to" Description="Folder for videos and snapshots">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconFolder}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBox x:Name="FolderBox" IsReadOnly="True" Width="240" />
+              <Button Content="Browse" Click="OnBrowseClick" />
+              <Button Content="Open" Click="OnOpenFolderClick" />
+            </StackPanel>
+          </ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <!-- Shortcuts -->
+        <TextBlock Text="Keyboard shortcuts" FontWeight="SemiBold" Margin="0,20,0,4" />
+
+        <ui:SettingsExpander Header="Start, then pause / continue" Description="Works while other apps are in front">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconKeyboard}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Ctrl + Alt +" VerticalAlignment="Center" />
+              <ComboBox x:Name="RecordKeyBox" MinWidth="72" />
+            </StackPanel>
+          </ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <ui:SettingsExpander Header="Stop">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconKeyboard}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Ctrl + Alt +" VerticalAlignment="Center" />
+              <ComboBox x:Name="StopKeyBox" MinWidth="72" />
+            </StackPanel>
+          </ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <ui:SettingsExpander Header="Snapshot">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconKeyboard}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Ctrl + Alt +" VerticalAlignment="Center" />
+              <ComboBox x:Name="SnapshotKeyBox" MinWidth="72" />
+            </StackPanel>
+          </ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+        <!-- Look -->
+        <TextBlock Text="Appearance" FontWeight="SemiBold" Margin="0,20,0,4" />
+
+        <ui:SettingsExpander Header="App theme" Description="Light, dark, or the same as Windows">
+          <ui:SettingsExpander.IconSource><ui:PathIconSource Data="{StaticResource IconTheme}" /></ui:SettingsExpander.IconSource>
+          <ui:SettingsExpander.Footer><ComboBox x:Name="ThemeBox" MinWidth="200" /></ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
+
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</wnd:AppWindow>
