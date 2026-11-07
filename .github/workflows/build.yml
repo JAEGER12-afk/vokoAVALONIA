@@ -1,6 +1,7 @@
 # Builds VokoAvalonia.exe on GitHub's servers every time code is pushed.
 # Download it from the "Actions" tab: open the latest run, then "Artifacts".
-# Pushing a tag like v0.1.0 also creates a GitHub Release with the zip attached.
+# Publishing a release on GitHub (Releases > Draft a new release > Publish)
+# attaches VokoAvalonia-windows-x64.zip to that release automatically.
 
 name: Build
 
@@ -8,9 +9,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
-  contents: write   # needed to create releases
+  contents: write   # needed to attach the zip to a release
 
 jobs:
   windows:
@@ -35,6 +38,33 @@ jobs:
           Expand-Archive ffmpeg.zip -DestinationPath ffmpeg
           Copy-Item ffmpeg/*/bin/ffmpeg.exe out/
           Remove-Item out/*.pdb -ErrorAction SilentlyContinue
+          Get-ChildItem out | Format-Table Name, Length
+
+      # Catches mistakes the compiler cannot see (broken XAML, missing icons,
+      # wrong ffmpeg options). The ffmpeg lines use the same options as Recorder.cs.
+      - name: Quick test (app starts, ffmpeg records)
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true   # stop if ffmpeg fails
+
+          # 1. The app opens and is still running after 15 seconds.
+          $app = Start-Process out/VokoAvalonia.exe -PassThru -RedirectStandardError app-errors.txt
+          Start-Sleep 15
+          if ($app.HasExited) { Get-Content app-errors.txt; throw "VokoAvalonia.exe closed by itself" }
+          Stop-Process -Id $app.Id
+          "App started OK"
+
+          # 2. ffmpeg has the screen and microphone inputs the app uses.
+          $devices = out/ffmpeg.exe -hide_banner -devices
+          if (-not ($devices -match 'gdigrab') -or -not ($devices -match 'dshow')) { throw "ffmpeg lacks gdigrab or dshow" }
+
+          # 3. Record 2 seconds, join into MP4 (like Stop), take a PNG (like Snapshot).
+          out/ffmpeg.exe -hide_banner -loglevel error -y -f gdigrab -framerate 30 -draw_mouse 1 -offset_x 0 -offset_y 0 -video_size 640x480 -t 2 -i desktop -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p segment1.mkv
+          "file 'segment1.mkv'" | Set-Content segments.txt
+          out/ffmpeg.exe -hide_banner -loglevel error -y -f concat -safe 0 -i segments.txt -c copy test.mp4
+          out/ffmpeg.exe -hide_banner -loglevel error -y -f gdigrab -offset_x 0 -offset_y 0 -video_size 640x480 -i desktop -frames:v 1 test.png
+          Get-ChildItem segment1.mkv, test.mp4, test.png | Format-Table Name, Length
+          "ffmpeg recorded OK"
 
       - uses: actions/upload-artifact@v6
         with:
@@ -42,12 +72,12 @@ jobs:
           path: out/
 
       - name: Zip for release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'release'
         shell: pwsh
         run: Compress-Archive -Path out/* -DestinationPath VokoAvalonia-windows-x64.zip
 
-      - name: Create release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Attach zip to the release
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v3
         with:
           files: VokoAvalonia-windows-x64.zip
